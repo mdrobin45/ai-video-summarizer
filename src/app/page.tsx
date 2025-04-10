@@ -9,6 +9,7 @@ import {
    Youtube,
 } from "lucide-react";
 import { useState } from "react";
+import toast, { Toaster } from "react-hot-toast";
 import "./style.css";
 
 export default function Home() {
@@ -45,7 +46,9 @@ export default function Home() {
          });
          return res?.data;
       } catch (error) {
-         console.error("Error fetching transcript:", error);
+         if (axios.isAxiosError(error) && error.response) {
+            toast.error(error.response.data.error);
+         }
       }
    };
 
@@ -83,6 +86,10 @@ Here is the transcript:
       setVideoId(videoId as string);
 
       const transcript = await getTranscript(url);
+      if (!transcript) {
+         setLoading(false);
+         return;
+      }
       await sendAiRequest(transcript);
       setLoading(false);
    };
@@ -167,6 +174,7 @@ Here is the transcript:
                </div>
             </div>
          </div>
+         <Toaster />
       </div>
    );
 }
