@@ -1,103 +1,172 @@
-import Image from "next/image";
+"use client";
+import { ai, processMarkdown } from "@/lib/utils";
+import axios from "axios";
+import {
+   ChevronRight,
+   FileText,
+   Loader2,
+   Sparkles,
+   Youtube,
+} from "lucide-react";
+import { useState } from "react";
+import "./style.css";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+   const [url, setUrl] = useState<string>("");
+   const [loading, setLoading] = useState<boolean>(false);
+   const [summary, setSummary] = useState<string>("");
+   const [videoId, setVideoId] = useState<string>("");
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+   // Function::Request: Get video ID from URL
+   function extractVideoId(url: string): string | null {
+      try {
+         const parsedUrl = new URL(url);
+         console.log(parsedUrl);
+         if (parsedUrl.hostname === "youtu.be") {
+            return parsedUrl.pathname.slice(1);
+         }
+         if (parsedUrl.searchParams.has("v")) {
+            return parsedUrl.searchParams.get("v");
+         }
+      } catch {
+         if (url.length === 11) return url;
+      }
+
+      return null;
+   }
+
+   // Function::Request: Get transcript from the server
+   const getTranscript = async (id: string) => {
+      try {
+         const res = await axios.get("/api/transcript", {
+            params: {
+               video: id,
+            },
+         });
+         return res?.data;
+      } catch (error) {
+         console.error("Error fetching transcript:", error);
+      }
+   };
+
+   // Function::Request: Send request to Gemini
+   const sendAiRequest = async (transcript: string) => {
+      try {
+         const res = await ai.models.generateContent({
+            model: "gemini-2.0-flash",
+            contents: `You are a video summarizer assistant. Summarize the following video transcript under three headings: Summary, Highlights, and Key Insights.
+
+Summary: A short paragraph describing the main idea and tone of the video.
+Highlights: 5–8 important moments or points.
+Key Insights:  5–7 deeper takeaways.
+Response should be in Markdown format. Do not add <pre><code> tags. Do not add any other text or explanation.
+Here is the transcript:
+[${transcript}]`,
+         });
+         processMarkdown(res.text || "")
+            .then((html) => {
+               setSummary(html);
+            })
+            .catch((error) => {
+               console.error("Error processing markdown:", error);
+            });
+      } catch (error) {
+         console.error("Error sending AI request:", error);
+      }
+   };
+
+   // Function: Handle form submission
+   const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setLoading(true);
+      const videoId = extractVideoId(url);
+      setVideoId(videoId as string);
+
+      const transcript = await getTranscript(url);
+      await sendAiRequest(transcript);
+      setLoading(false);
+   };
+
+   return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-white">
+         <div className="container mx-auto px-4 py-12">
+            <div className="flex items-center justify-center mb-12">
+               <Youtube className="w-10 h-10 text-red-500 mr-3" />
+               <h1 className="text-4xl font-bold">YouTube Video Summarizer</h1>
+               <Sparkles className="w-6 h-6 text-yellow-400 ml-3" />
+            </div>
+
+            <div>
+               <form onSubmit={handleSubmit} className="mb-8">
+                  <div className="flex gap-4">
+                     <input
+                        type="text"
+                        value={url}
+                        onChange={(e) => setUrl(e.target.value)}
+                        placeholder="Paste YouTube video URL or ID here..."
+                        className="flex-1 px-4 py-3 rounded-lg bg-gray-700 border border-gray-600 focus:outline-none focus:border-blue-500 text-white placeholder-gray-400"
+                     />
+                     <button
+                        type="submit"
+                        disabled={loading || !url}
+                        className="px-6 py-3 cursor-pointer bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                        {loading ? (
+                           <>
+                              <Loader2 className="w-5 h-5 animate-spin" />
+                              Summarizing...
+                           </>
+                        ) : (
+                           <>
+                              Summarize
+                              <ChevronRight className="w-5 h-5" />
+                           </>
+                        )}
+                     </button>
+                  </div>
+               </form>
+
+               {videoId && (
+                  <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+                     <div className="aspect-video w-full bg-gray-800 rounded-xl overflow-hidden sticky top-10">
+                        <iframe
+                           src={`https://www.youtube.com/embed/${videoId}`}
+                           title="YouTube video player"
+                           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                           allowFullScreen
+                           className="w-full h-full"
+                        />
+                     </div>
+
+                     {!loading ? (
+                        <div className="bg-gray-700 rounded-xl p-6 shadow-lg">
+                           <div className="flex items-center gap-3 mb-4 text-blue-400 border-b border-gray-600 pb-4">
+                              <FileText className="w-6 h-6" />
+                              <h2 className="text-xl font-semibold">Summary</h2>
+                           </div>
+
+                           <div className="space-y-4">
+                              <div
+                                 dangerouslySetInnerHTML={{ __html: summary }}
+                                 className="text-gray-200 leading-relaxed parseContent"></div>
+                           </div>
+                        </div>
+                     ) : (
+                        <Loader2 className="w-10 h-10 animate-spin text-blue-500 mx-auto mt-20" />
+                     )}
+                  </div>
+               )}
+
+               <div className="mt-8 text-center text-gray-400">
+                  <p className="text-sm">
+                     Developed by{" "}
+                     <a className="text-blue-600" href="https://robinrana.com">
+                        Robin Rana
+                     </a>{" "}
+                     • AI Powered Tool
+                  </p>
+               </div>
+            </div>
+         </div>
+      </div>
+   );
 }

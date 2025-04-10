@@ -1,0 +1,42 @@
+/* Headings */
+.parseContent h2,
+h3,
+h4,
+h5,
+h6 {
+   font-size: 1.75rem;
+   font-weight: 600;
+   margin-top: 2rem;
+   margin-bottom: 1rem;
+   border-left: 4px solid #4f46e5; /* Indigo-600 */
+   padding-left: 0.75rem;
+}
+
+/* Lists */
+.parseContent ul {
+   padding-left: 1.5rem;
+   margin: 1rem 0;
+   list-style: disc;
+}
+
+.parseContent ul li {
+   margin-bottom: 0.5rem;
+   position: relative;
+}
+
+/* Optional: better list marker alignment */
+.parseContent ul li::marker {
+   color: #4f46e5; /* Indigo-600 */
+}
+
+/* Responsive enhancement */
+@media (max-width: 640px) {
+   .parseContent {
+      font-size: 0.95rem;
+      padding: 0.75rem;
+   }
+
+   .parseContent h2 {
+      font-size: 1.5rem;
+   }
+}
