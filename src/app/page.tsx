@@ -127,7 +127,7 @@ Here is the transcript:
 
                {videoId && (
                   <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-                     <div className="aspect-video w-full bg-gray-800 rounded-xl overflow-hidden sticky top-10">
+                     <div className="aspect-video w-full bg-gray-800 rounded-xl overflow-hidden lg:sticky lg:top-10">
                         <iframe
                            src={`https://www.youtube.com/embed/${videoId}`}
                            title="YouTube video player"

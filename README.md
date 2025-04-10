@@ -1,4 +1,4 @@
-# YouTube Summarizer
+# YouTube Video Summarizer
 
 A tool to automatically generate concise summaries of YouTube videos using AI.
 
